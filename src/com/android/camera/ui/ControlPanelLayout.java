@@ -64,7 +64,7 @@ public class ControlPanelLayout extends RelativeLayout {
             // width of the parent.
             String density = SystemProperties.get("ro.sf.lcd_density");
             if (density.equals("120"))
-                measuredSize = (int) (longSideSize - shortSideSize / 5.0 * 6.0);
+                measuredSize = (int) (longSideSize - shortSideSize / 10.0 * 11.0);
             else
                 measuredSize = (int) (longSideSize - shortSideSize / 3.0 * 4.0);
         } else {
