@@ -126,6 +126,7 @@ public class Camera extends ActivityBase implements FocusManager.Listener,
     private int mZoomMax;
     private int mTargetZoomValue;
     private ZoomControl mZoomControl;
+    private boolean mVolumeZoom = false;    // Volume zoom.    
 
     private boolean mStartZoom = false;
     private float oldDistance = 1f;
@@ -466,9 +467,8 @@ public class Camera extends ActivityBase implements FocusManager.Listener,
         mOrientationListener = new MyOrientationEventListener(Camera.this);
         mOrientationListener.enable();
 
-        // Initialize location sevice.
-        boolean recordLocation = RecordLocationPreference.get(
-                mPreferences, getContentResolver());
+        // Initialize location service.
+        boolean recordLocation = RecordLocationPreference.get(mPreferences, getContentResolver());
         initOnScreenIndicator();
         mLocationManager.recordLocation(recordLocation);
 
@@ -605,6 +605,9 @@ public class Camera extends ActivityBase implements FocusManager.Listener,
         mZoomControl.setSmoothZoomSupported(mSmoothZoomSupported);
         mZoomControl.setOnZoomChangeListener(new ZoomChangeListener());
         mCameraDevice.setZoomChangeListener(mZoomListener);
+        
+        // Initialize volume zoom.
+        mVolumeZoom = VolumeZoomPreference.get(mPreferences, mContentResolver);
     }
 
     private void onZoomValueChanged(int index) {
@@ -1410,6 +1413,7 @@ public class Camera extends ActivityBase implements FocusManager.Listener,
         final String[] OTHER_SETTING_KEYS = {
                 CameraSettings.KEY_RECORD_LOCATION,
                 CameraSettings.KEY_POWER_SHUTTER,
+                CameraSettings.KEY_VOLUME_ZOOM,
                 CameraSettings.KEY_FOCUS_SOUND,
                 CameraSettings.KEY_STORAGE,
                 CameraSettings.KEY_PICTURE_SIZE,
@@ -1934,10 +1938,28 @@ public class Camera extends ActivityBase implements FocusManager.Listener,
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_FOCUS:
-                if (mFirstTimeInitialized && event.getRepeatCount() == 0) {
+				if (mFirstTimeInitialized && (event.getRepeatCount() == 0)) {
                     onShutterButtonFocus(true);
                 }
                 return true;
+            case KeyEvent.KEYCODE_VOLUME_UP:
+              // If the Volume Up key is pressed, zoom in.
+              if (mFirstTimeInitialized && mVolumeZoom && (event.getRepeatCount() == 0)) {
+                    mZoomValue = (((mZoomValue + 10) > mZoomMax) ? mZoomMax : (mZoomValue + 10)); 
+                    onZoomValueChanged(mZoomValue);
+                    mZoomControl.setZoomIndex(mZoomValue);
+                    return true;
+              }
+              return false;
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+              // If the Volume Down key is pressed, zoom out.
+              if (mFirstTimeInitialized && mVolumeZoom && (event.getRepeatCount() == 0)) {
+                    mZoomValue = (((mZoomValue - 10) < 0) ? 0 : (mZoomValue - 10)); 
+                        onZoomValueChanged(mZoomValue);
+                        mZoomControl.setZoomIndex(mZoomValue);
+                        return true;
+              }
+              return false;
             case KeyEvent.KEYCODE_CAMERA:
                 if (mFirstTimeInitialized && event.getRepeatCount() == 0) {
                     onShutterButtonClick();
@@ -1961,7 +1983,7 @@ public class Camera extends ActivityBase implements FocusManager.Listener,
                 }
                 return true;
             case KeyEvent.KEYCODE_POWER:
-                if (mFirstTimeInitialized && event.getRepeatCount() == 0 && powerShutter(mPreferences)) {
+                if (mFirstTimeInitialized && (event.getRepeatCount() == 0) && powerShutter(mPreferences)) {
                     onShutterButtonFocus(true);
                 }
                 return true;
@@ -2517,6 +2539,10 @@ public class Camera extends ActivityBase implements FocusManager.Listener,
         boolean recordLocation = RecordLocationPreference.get(
                 mPreferences, getContentResolver());
         mLocationManager.recordLocation(recordLocation);
+
+        
+        if (mParameters.isZoomSupported())
+            mVolumeZoom = VolumeZoomPreference.get(mPreferences, mContentResolver);
 
         String storage = CameraSettings.readStorage(mPreferences);
         if (!storage.equals(mStorage)) {
